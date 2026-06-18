@@ -16,7 +16,8 @@ public class DeviceServer implements Runnable {
     private int port;
     private DeviceService deviceService;
     private ServerSocket serverSocket;
-    private boolean running = false;
+    private volatile boolean running = false;
+    private Thread serverThread;
     private Consumer<String> logCallback;
 
     public DeviceServer(DeviceService deviceService) {
@@ -31,7 +32,8 @@ public class DeviceServer implements Runnable {
     public void startServer() {
         if (running) return;
         running = true;
-        new Thread(this, "DeviceServer").start();
+        serverThread = new Thread(this, "DeviceServer");
+        serverThread.start();
         log("服务启动，监听端口: " + port);
     }
 
@@ -43,6 +45,9 @@ public class DeviceServer implements Runnable {
             }
         } catch (IOException e) {
             log("停止服务异常: " + e.getMessage());
+        }
+        if (serverThread != null && serverThread.isAlive()) {
+            serverThread.interrupt();
         }
         log("服务已停止");
     }
@@ -77,20 +82,26 @@ public class DeviceServer implements Runnable {
     }
 
     private void handleClient(Socket client) {
-        try (BufferedReader in = new BufferedReader(
-                new InputStreamReader(client.getInputStream(), "UTF-8"));
-             PrintWriter out = new PrintWriter(
-                new OutputStreamWriter(client.getOutputStream(), "UTF-8"), true)) {
+        try {
+            client.setSoTimeout(5000); // 5秒超时，让readLine能被打断
+            BufferedReader in = new BufferedReader(
+                    new InputStreamReader(client.getInputStream(), "UTF-8"));
+            PrintWriter out = new PrintWriter(
+                    new OutputStreamWriter(client.getOutputStream(), "UTF-8"), true);
 
             String line;
-            while ((line = in.readLine()) != null) {
+            while (running && (line = in.readLine()) != null) {
                 log("收到命令: " + line);
                 String response = processCommand(line);
                 out.println(response);
                 log("响应: " + response);
             }
+        } catch (java.net.SocketTimeoutException e) {
+            // readLine超时，正常退出检查running状态
         } catch (IOException e) {
-            log("客户端通信异常: " + e.getMessage());
+            if (running) {
+                log("客户端通信异常: " + e.getMessage());
+            }
         } finally {
             try {
                 client.close();

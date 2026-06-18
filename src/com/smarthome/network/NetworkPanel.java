@@ -16,8 +16,7 @@ public class NetworkPanel extends JPanel {
     private DeviceService deviceService;
     private JLabel statusLabel;
     private JTextArea logArea;
-    private JButton btnStart;
-    private JButton btnStop;
+    private JButton btnToggle;
 
     // 客户端测试组件
     private JTextField cmdField;
@@ -62,17 +61,12 @@ public class NetworkPanel extends JPanel {
         JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         statusLabel = new JLabel("状态: 已停止");
         statusLabel.setForeground(Color.RED);
-        btnStart = new JButton("启动服务");
-        btnStop = new JButton("停止服务");
-        btnStop.setEnabled(false);
-
-        btnStart.addActionListener(this::doStart);
-        btnStop.addActionListener(this::doStop);
+        btnToggle = new JButton("启动服务");
+        btnToggle.addActionListener(this::doToggle);
 
         controlPanel.add(statusLabel);
         controlPanel.add(Box.createHorizontalStrut(20));
-        controlPanel.add(btnStart);
-        controlPanel.add(btnStop);
+        controlPanel.add(btnToggle);
         serverPanel.add(controlPanel, BorderLayout.NORTH);
 
         logArea = new JTextArea(6, 30);
@@ -167,22 +161,20 @@ public class NetworkPanel extends JPanel {
         return panel;
     }
 
-    private void doStart(ActionEvent e) {
-        deviceServer.startServer();
-        if (deviceServer.isRunning()) {
-            statusLabel.setText("状态: 运行中 (端口 " + deviceServer.getPort() + ")");
-            statusLabel.setForeground(new Color(0, 153, 0));
-            btnStart.setEnabled(false);
-            btnStop.setEnabled(true);
+    private void doToggle(ActionEvent e) {
+        if (!deviceServer.isRunning()) {
+            deviceServer.startServer();
+            if (deviceServer.isRunning()) {
+                statusLabel.setText("状态: 运行中 (端口 " + deviceServer.getPort() + ")");
+                statusLabel.setForeground(new Color(0, 153, 0));
+                btnToggle.setText("停止服务");
+            }
+        } else {
+            deviceServer.stopServer();
+            statusLabel.setText("状态: 已停止");
+            statusLabel.setForeground(Color.RED);
+            btnToggle.setText("启动服务");
         }
-    }
-
-    private void doStop(ActionEvent e) {
-        deviceServer.stopServer();
-        statusLabel.setText("状态: 已停止");
-        statusLabel.setForeground(Color.RED);
-        btnStart.setEnabled(true);
-        btnStop.setEnabled(false);
     }
 
     private void doSend(ActionEvent e) {

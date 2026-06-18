@@ -132,15 +132,15 @@ public class MainFrame extends JFrame {
 
         // 文件菜单
         JMenu fileMenu = new JMenu("文件(F)");
-        JMenuItem exitItem = new JMenuItem("退出");
+        JMenuItem exitItem = new JMenuItem("退出", loadIcon("assets/design/menu_exit.png"));
         exitItem.addActionListener(e -> dispose());
         fileMenu.add(exitItem);
         menuBar.add(fileMenu);
 
         // 设备菜单
         JMenu deviceMenu = new JMenu("设备(D)");
-        addDeviceItem = new JMenuItem("添加设备");
-        removeDeviceItem = new JMenuItem("删除设备");
+        addDeviceItem = new JMenuItem("添加设备", loadIcon("assets/design/menu_add.png"));
+        removeDeviceItem = new JMenuItem("删除设备", loadIcon("assets/design/menu_remove.png"));
         addDeviceItem.addActionListener(e -> showAddDeviceDialog());
         removeDeviceItem.addActionListener(e -> showRemoveDeviceDialog());
         deviceMenu.add(addDeviceItem);
@@ -162,7 +162,7 @@ public class MainFrame extends JFrame {
 
         // 帮助菜单
         JMenu helpMenu = new JMenu("帮助(H)");
-        JMenuItem aboutItem = new JMenuItem("关于");
+        JMenuItem aboutItem = new JMenuItem("关于", loadIcon("assets/design/menu_about.png"));
         aboutItem.addActionListener(e -> JOptionPane.showMessageDialog(this,
                 "智能家居控制系统 v1.0\n基于 Java SE + Swing 开发",
                 "关于", JOptionPane.INFORMATION_MESSAGE));
@@ -171,7 +171,7 @@ public class MainFrame extends JFrame {
 
         // 网络菜单
         JMenu networkMenu = new JMenu("网络(N)");
-        JMenuItem networkItem = new JMenuItem("网络控制");
+        JMenuItem networkItem = new JMenuItem("网络控制", loadIcon("assets/design/menu_network.png"));
         networkItem.addActionListener(e -> showNetworkDialog());
         networkMenu.add(networkItem);
         menuBar.add(networkMenu);
