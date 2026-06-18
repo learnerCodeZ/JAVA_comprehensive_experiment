@@ -152,9 +152,9 @@ public class MainFrame extends JFrame {
         sceneHomeItem = new JMenuItem("回家模式", loadIcon("assets/design/scene_home.png"));
         sceneAwayItem = new JMenuItem("离家模式", loadIcon("assets/design/scene_away.png"));
         sleepItem = new JMenuItem("睡眠模式", loadIcon("assets/design/scene_sleep.png"));
-        sceneHomeItem.addActionListener(e -> applySceneHome());
-        sceneAwayItem.addActionListener(e -> applySceneAway());
-        sleepItem.addActionListener(e -> applySceneSleep());
+        sceneHomeItem.addActionListener(e -> showSceneDialog());
+        sceneAwayItem.addActionListener(e -> showSceneDialog());
+        sleepItem.addActionListener(e -> showSceneDialog());
         sceneMenu.add(sceneHomeItem);
         sceneMenu.add(sceneAwayItem);
         sceneMenu.add(sleepItem);
@@ -530,7 +530,7 @@ public class MainFrame extends JFrame {
 
     private void showControlDialog(Device device) {
         JDialog dialog = new JDialog(this, "设备控制 - " + device.getName(), true);
-        dialog.setSize(300, 250);
+        dialog.setSize(320, 350);
         dialog.setLocationRelativeTo(this);
 
         JPanel panel = new JPanel();
@@ -538,43 +538,168 @@ public class MainFrame extends JFrame {
         panel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         panel.add(new JLabel("设备类型: " + device.getType()));
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(Box.createVerticalStrut(5));
 
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        statusPanel.add(new JLabel("状态: " + device.getStatusText()));
+        JLabel statusLabel = new JLabel("状态: " + device.getStatusText());
+        statusPanel.add(statusLabel);
         panel.add(statusPanel);
         panel.add(Box.createVerticalStrut(10));
 
+        // 根据设备类型动态生成参数控件
+        if (device instanceof Light) {
+            addLightControls(panel, (Light) device);
+        } else if (device instanceof AirConditioner) {
+            addAirConditionerControls(panel, (AirConditioner) device);
+        } else if (device instanceof Curtain) {
+            addCurtainControls(panel, (Curtain) device);
+        } else if (device instanceof Speaker) {
+            addSpeakerControls(panel, (Speaker) device);
+        }
+
+        panel.add(Box.createVerticalStrut(10));
+
+        // 按钮区
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         JButton btnOn = new JButton("开启");
         JButton btnOff = new JButton("关闭");
-        JButton btnClose = new JButton("关闭窗口");
+        JButton btnConfirm = new JButton("确定");
 
         btnOn.addActionListener(e -> {
             device.turnOn();
+            statusLabel.setText("状态: " + device.getStatusText());
             logService.log(device.getName(), "开启");
             updateLogArea();
             refreshDevicePanel();
-            dialog.dispose();
         });
 
         btnOff.addActionListener(e -> {
             device.turnOff();
+            statusLabel.setText("状态: " + device.getStatusText());
             logService.log(device.getName(), "关闭");
+            updateLogArea();
+            refreshDevicePanel();
+        });
+
+        btnConfirm.addActionListener(e -> {
+            logService.log(device.getName(), "参数调节");
             updateLogArea();
             refreshDevicePanel();
             dialog.dispose();
         });
 
-        btnClose.addActionListener(e -> dialog.dispose());
-
         btnPanel.add(btnOn);
         btnPanel.add(btnOff);
-        btnPanel.add(btnClose);
+        btnPanel.add(btnConfirm);
         panel.add(btnPanel);
 
-        dialog.add(panel);
+        dialog.add(new JScrollPane(panel));
         dialog.setVisible(true);
+    }
+
+    private void addLightControls(JPanel panel, Light light) {
+        // 亮度滑块
+        JPanel brightnessPanel = new JPanel(new BorderLayout(5, 0));
+        brightnessPanel.add(new JLabel("亮度:"), BorderLayout.WEST);
+        JSlider brightnessSlider = new JSlider(0, 100, light.getBrightness());
+        brightnessSlider.setMajorTickSpacing(25);
+        brightnessSlider.setPaintTicks(true);
+        JLabel brightnessValue = new JLabel(light.getBrightness() + "%");
+        brightnessSlider.addChangeListener(e -> {
+            brightnessValue.setText(brightnessSlider.getValue() + "%");
+            light.setBrightness(brightnessSlider.getValue());
+        });
+        brightnessPanel.add(brightnessSlider, BorderLayout.CENTER);
+        brightnessPanel.add(brightnessValue, BorderLayout.EAST);
+        panel.add(brightnessPanel);
+        panel.add(Box.createVerticalStrut(10));
+
+        // 颜色下拉框
+        JPanel colorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        colorPanel.add(new JLabel("颜色:"));
+        String[] colors = {"白色", "暖白", "红色", "橙色", "黄色", "绿色", "蓝色", "紫色"};
+        JComboBox<String> colorCombo = new JComboBox<>(colors);
+        colorCombo.setSelectedItem(light.getColor());
+        colorCombo.addActionListener(e -> light.setColor((String) colorCombo.getSelectedItem()));
+        colorPanel.add(colorCombo);
+        panel.add(colorPanel);
+    }
+
+    private void addAirConditionerControls(JPanel panel, AirConditioner ac) {
+        // 温度滑块
+        JPanel tempPanel = new JPanel(new BorderLayout(5, 0));
+        tempPanel.add(new JLabel("温度:"), BorderLayout.WEST);
+        JSlider tempSlider = new JSlider(16, 30, ac.getTemperature());
+        tempSlider.setMajorTickSpacing(2);
+        tempSlider.setPaintTicks(true);
+        JLabel tempValue = new JLabel(ac.getTemperature() + "°C");
+        tempSlider.addChangeListener(e -> {
+            tempValue.setText(tempSlider.getValue() + "°C");
+            ac.setTemperature(tempSlider.getValue());
+        });
+        tempPanel.add(tempSlider, BorderLayout.CENTER);
+        tempPanel.add(tempValue, BorderLayout.EAST);
+        panel.add(tempPanel);
+        panel.add(Box.createVerticalStrut(10));
+
+        // 模式下拉框
+        JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        modePanel.add(new JLabel("模式:"));
+        String[] modes = {"制冷", "制热", "除湿", "自动"};
+        JComboBox<String> modeCombo = new JComboBox<>(modes);
+        modeCombo.setSelectedItem(ac.getMode());
+        modeCombo.addActionListener(e -> ac.setMode((String) modeCombo.getSelectedItem()));
+        modePanel.add(modeCombo);
+        panel.add(modePanel);
+    }
+
+    private void addCurtainControls(JPanel panel, Curtain curtain) {
+        // 开合度滑块
+        JPanel posPanel = new JPanel(new BorderLayout(5, 0));
+        posPanel.add(new JLabel("开合度:"), BorderLayout.WEST);
+        JSlider posSlider = new JSlider(0, 100, curtain.getPosition());
+        posSlider.setMajorTickSpacing(25);
+        posSlider.setPaintTicks(true);
+        JLabel posValue = new JLabel(curtain.getPosition() + "%");
+        posSlider.addChangeListener(e -> {
+            posValue.setText(posSlider.getValue() + "%");
+            curtain.setPosition(posSlider.getValue());
+        });
+        posPanel.add(posSlider, BorderLayout.CENTER);
+        posPanel.add(posValue, BorderLayout.EAST);
+        panel.add(posPanel);
+    }
+
+    private void addSpeakerControls(JPanel panel, Speaker speaker) {
+        // 音量滑块
+        JPanel volPanel = new JPanel(new BorderLayout(5, 0));
+        volPanel.add(new JLabel("音量:"), BorderLayout.WEST);
+        JSlider volSlider = new JSlider(0, 100, speaker.getVolume());
+        volSlider.setMajorTickSpacing(25);
+        volSlider.setPaintTicks(true);
+        JLabel volValue = new JLabel(String.valueOf(speaker.getVolume()));
+        volSlider.addChangeListener(e -> {
+            volValue.setText(String.valueOf(volSlider.getValue()));
+            speaker.setVolume(volSlider.getValue());
+        });
+        volPanel.add(volSlider, BorderLayout.CENTER);
+        volPanel.add(volValue, BorderLayout.EAST);
+        panel.add(volPanel);
+        panel.add(Box.createVerticalStrut(10));
+
+        // 播放状态
+        JPanel playPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        playPanel.add(new JLabel("播放:"));
+        JRadioButton btnPlaying = new JRadioButton("是", speaker.isPlaying());
+        JRadioButton btnNotPlaying = new JRadioButton("否", !speaker.isPlaying());
+        ButtonGroup playGroup = new ButtonGroup();
+        playGroup.add(btnPlaying);
+        playGroup.add(btnNotPlaying);
+        btnPlaying.addActionListener(e -> speaker.setPlaying(true));
+        btnNotPlaying.addActionListener(e -> speaker.setPlaying(false));
+        playPanel.add(btnPlaying);
+        playPanel.add(btnNotPlaying);
+        panel.add(playPanel);
     }
 
     private void updateLogArea() {
@@ -599,6 +724,19 @@ public class MainFrame extends JFrame {
         }
         dialog.setContentPane(networkPanel);
         dialog.setVisible(true);
+    }
+
+    private void showSceneDialog() {
+        SceneDialog sceneDialog = new SceneDialog(this);
+        sceneDialog.setVisible(true);
+        String scene = sceneDialog.getSelectedScene();
+        if (scene == null) return;
+
+        switch (scene) {
+            case "home": applySceneHome(); break;
+            case "away": applySceneAway(); break;
+            case "sleep": applySceneSleep(); break;
+        }
     }
 
     public void dispose() {
