@@ -1,0 +1,78 @@
+[
+  {
+    "id": "d1",
+    "name": "客厅灯",
+    "type": "智能灯",
+    "roomId": "r1",
+    "status": false,
+    "brightness": 100,
+    "temperature": 0,
+    "position": 0,
+    "volume": 0,
+    "color": "白色",
+    "playing": false
+  },
+  {
+    "id": "d2",
+    "name": "卧室灯",
+    "type": "智能灯",
+    "roomId": "r2",
+    "status": false,
+    "brightness": 100,
+    "temperature": 0,
+    "position": 0,
+    "volume": 0,
+    "color": "白色",
+    "playing": false
+  },
+  {
+    "id": "d3",
+    "name": "客厅空调",
+    "type": "空调",
+    "roomId": "r1",
+    "status": false,
+    "brightness": 0,
+    "temperature": 26,
+    "position": 0,
+    "volume": 0,
+    "mode": "制冷",
+    "playing": false
+  },
+  {
+    "id": "d4",
+    "name": "卧室空调",
+    "type": "空调",
+    "roomId": "r2",
+    "status": false,
+    "brightness": 0,
+    "temperature": 26,
+    "position": 0,
+    "volume": 0,
+    "mode": "制冷",
+    "playing": false
+  },
+  {
+    "id": "d5",
+    "name": "客厅窗帘",
+    "type": "智能窗帘",
+    "roomId": "r1",
+    "status": false,
+    "brightness": 0,
+    "temperature": 0,
+    "position": 0,
+    "volume": 0,
+    "playing": false
+  },
+  {
+    "id": "d6",
+    "name": "智能音箱",
+    "type": "智能音箱",
+    "roomId": "r1",
+    "status": false,
+    "brightness": 0,
+    "temperature": 0,
+    "position": 0,
+    "volume": 50,
+    "playing": false
+  }
+]
