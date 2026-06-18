@@ -35,7 +35,7 @@ public class SceneDialog extends JDialog {
 
         // 三个场景卡片
         mainPanel.add(createSceneCard(
-                "回家模式", "assets/design/scene_home.png",
+                "回家模式", "assets/icons/scene_home.png",
                 "智能灯全部开启（亮度100%）",
                 "空调开启，26°C制冷模式",
                 "窗帘全部打开（开合度100%）",
@@ -44,7 +44,7 @@ public class SceneDialog extends JDialog {
         mainPanel.add(Box.createVerticalStrut(10));
 
         mainPanel.add(createSceneCard(
-                "离家模式", "assets/design/scene_away.png",
+                "离家模式", "assets/icons/scene_away.png",
                 "所有设备关闭",
                 "节省能源，安全出门",
                 "",
@@ -53,7 +53,7 @@ public class SceneDialog extends JDialog {
         mainPanel.add(Box.createVerticalStrut(10));
 
         mainPanel.add(createSceneCard(
-                "睡眠模式", "assets/design/scene_sleep.png",
+                "睡眠模式", "assets/icons/scene_sleep.png",
                 "智能灯全部关闭",
                 "空调开启，25°C制冷模式",
                 "窗帘关闭，音箱音量调至10",
