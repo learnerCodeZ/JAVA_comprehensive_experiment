@@ -1,6 +1,7 @@
 package com.smarthome.network;
 
 import com.smarthome.config.AppConfig;
+import com.smarthome.entity.Device;
 import com.smarthome.service.DeviceService;
 
 import java.io.*;
@@ -122,7 +123,7 @@ public class DeviceServer implements Runnable {
             return success ? "OK:设备已关闭" : "ERROR:设备未找到";
         } else if (command.equals("GET_ALL")) {
             StringBuilder sb = new StringBuilder();
-            for (var device : deviceService.findAll()) {
+            for (Device device : deviceService.findAll()) {
                 sb.append(device.getStatusReport()).append(";");
             }
             return sb.length() > 0 ? sb.toString() : "OK:无设备";

@@ -1,5 +1,6 @@
 package com.smarthome.ui;
 
+import com.smarthome.util.UIUtils;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
@@ -18,64 +19,66 @@ public class SceneDialog extends JDialog {
     }
 
     private void initUI() {
-        setSize(420, 380);
+        setSize(420, 440);
         setLocationRelativeTo(getOwner());
         setResizable(false);
 
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-        mainPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(UIUtils.BG_WHITE);
 
-        // 标题
-        JLabel titleLabel = new JLabel("请选择场景模式", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(titleLabel);
-        mainPanel.add(Box.createVerticalStrut(15));
+        // 渐变头部
+        wrapper.add(UIUtils.createGradientHeaderPanel("请选择场景模式", 420, 80), BorderLayout.NORTH);
 
-        // 三个场景卡片
-        mainPanel.add(createSceneCard(
+        // 场景卡片区域
+        JPanel cardsPanel = new JPanel();
+        cardsPanel.setLayout(new BoxLayout(cardsPanel, BoxLayout.Y_AXIS));
+        cardsPanel.setBackground(UIUtils.BG_WHITE);
+        cardsPanel.setBorder(new EmptyBorder(15, 15, 10, 15));
+
+        cardsPanel.add(createSceneCard(
                 "回家模式", "assets/icons/scene_home.png",
                 "智能灯全部开启（亮度100%）",
                 "空调开启，26°C制冷模式",
                 "窗帘全部打开（开合度100%）",
                 "home"));
+        cardsPanel.add(Box.createVerticalStrut(10));
 
-        mainPanel.add(Box.createVerticalStrut(10));
-
-        mainPanel.add(createSceneCard(
+        cardsPanel.add(createSceneCard(
                 "离家模式", "assets/icons/scene_away.png",
                 "所有设备关闭",
                 "节省能源，安全出门",
                 "",
                 "away"));
+        cardsPanel.add(Box.createVerticalStrut(10));
 
-        mainPanel.add(Box.createVerticalStrut(10));
-
-        mainPanel.add(createSceneCard(
+        cardsPanel.add(createSceneCard(
                 "睡眠模式", "assets/icons/scene_sleep.png",
                 "智能灯全部关闭",
                 "空调开启，25°C制冷模式",
                 "窗帘关闭，音箱音量调至10",
                 "sleep"));
 
-        mainPanel.add(Box.createVerticalStrut(15));
+        wrapper.add(cardsPanel, BorderLayout.CENTER);
 
         // 取消按钮
-        JButton btnCancel = new JButton("取消");
-        btnCancel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnPanel.setBackground(UIUtils.BG_WHITE);
+        btnPanel.setBorder(new EmptyBorder(0, 0, 15, 0));
+        JButton btnCancel = UIUtils.createGradientButton("取消");
         btnCancel.addActionListener(e -> dispose());
-        mainPanel.add(btnCancel);
+        btnPanel.add(btnCancel);
+        wrapper.add(btnPanel, BorderLayout.SOUTH);
 
-        add(mainPanel);
+        add(wrapper);
     }
 
     private JPanel createSceneCard(String title, String iconPath,
                                     String detail1, String detail2, String detail3,
                                     String sceneKey) {
         JPanel card = new JPanel(new BorderLayout(10, 5));
+        card.setBackground(UIUtils.BG_WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(200, 200, 200), 1, true),
+                new LineBorder(UIUtils.CARD_BORDER, 1, true),
                 new EmptyBorder(10, 10, 10, 10)
         ));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -94,24 +97,34 @@ public class SceneDialog extends JDialog {
         // 右侧信息
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(UIUtils.BG_WHITE);
 
         JLabel nameLabel = new JLabel(title);
-        nameLabel.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        nameLabel.setFont(UIUtils.FONT_TITLE_14);
         infoPanel.add(nameLabel);
 
         if (!detail1.isEmpty()) {
-            infoPanel.add(new JLabel("  • " + detail1));
+            JLabel d1 = new JLabel("  • " + detail1);
+            d1.setFont(UIUtils.FONT_SMALL_11);
+            d1.setForeground(UIUtils.TEXT_LABEL);
+            infoPanel.add(d1);
         }
         if (!detail2.isEmpty()) {
-            infoPanel.add(new JLabel("  • " + detail2));
+            JLabel d2 = new JLabel("  • " + detail2);
+            d2.setFont(UIUtils.FONT_SMALL_11);
+            d2.setForeground(UIUtils.TEXT_LABEL);
+            infoPanel.add(d2);
         }
         if (!detail3.isEmpty()) {
-            infoPanel.add(new JLabel("  • " + detail3));
+            JLabel d3 = new JLabel("  • " + detail3);
+            d3.setFont(UIUtils.FONT_SMALL_11);
+            d3.setForeground(UIUtils.TEXT_LABEL);
+            infoPanel.add(d3);
         }
 
         card.add(infoPanel, BorderLayout.CENTER);
 
-        // 点击选择
+        // 点击/悬停事件
         card.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -122,19 +135,17 @@ public class SceneDialog extends JDialog {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 card.setBorder(BorderFactory.createCompoundBorder(
-                        new LineBorder(new Color(66, 133, 244), 2, true),
-                        new EmptyBorder(9, 9, 9, 9)
-                ));
-                card.setBackground(new Color(240, 245, 255));
+                        new LineBorder(UIUtils.CARD_HOVER_BORDER, 2, true),
+                        new EmptyBorder(9, 9, 9, 9)));
+                card.setBackground(UIUtils.CARD_HOVER_BG);
             }
 
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
                 card.setBorder(BorderFactory.createCompoundBorder(
-                        new LineBorder(new Color(200, 200, 200), 1, true),
-                        new EmptyBorder(10, 10, 10, 10)
-                ));
-                card.setBackground(UIManager.getColor("Panel.background"));
+                        new LineBorder(UIUtils.CARD_BORDER, 1, true),
+                        new EmptyBorder(10, 10, 10, 10)));
+                card.setBackground(UIUtils.BG_WHITE);
             }
         });
 

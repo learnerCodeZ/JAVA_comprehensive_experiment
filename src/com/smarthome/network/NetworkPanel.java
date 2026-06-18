@@ -2,8 +2,9 @@ package com.smarthome.network;
 
 import com.smarthome.entity.Device;
 import com.smarthome.service.DeviceService;
+import com.smarthome.util.UIUtils;
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
+import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 
@@ -47,51 +48,62 @@ public class NetworkPanel extends JPanel {
 
     private void initUI() {
         setLayout(new BorderLayout(10, 10));
+        setBackground(UIUtils.BG_WHITE);
 
         // 左侧：命令列表
         JPanel cmdListPanel = createCommandListPanel();
 
         // 右侧：服务端控制 + 客户端测试
         JPanel rightPanel = new JPanel(new BorderLayout(5, 5));
+        rightPanel.setBackground(UIUtils.BG_WHITE);
 
         // 上方：服务端控制
         JPanel serverPanel = new JPanel(new BorderLayout(5, 5));
-        serverPanel.setBorder(new TitledBorder("服务端控制"));
+        serverPanel.setBorder(UIUtils.createStyledSectionBorder("服务端控制"));
+        serverPanel.setBackground(UIUtils.BG_WHITE);
 
-        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel controlPanel = new JPanel(new BorderLayout(10, 0));
+        controlPanel.setBackground(UIUtils.BG_WHITE);
+        controlPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
         statusLabel = new JLabel("状态: 已停止");
-        statusLabel.setForeground(Color.RED);
-        btnToggle = new JButton("启动服务");
+        statusLabel.setFont(UIUtils.FONT_BODY_13);
+        statusLabel.setForeground(UIUtils.STATUS_STOPPED);
+        btnToggle = UIUtils.createGradientButton("启动服务", new Dimension(120, 32));
         btnToggle.addActionListener(this::doToggle);
 
-        controlPanel.add(statusLabel);
-        controlPanel.add(Box.createHorizontalStrut(20));
-        controlPanel.add(btnToggle);
+        controlPanel.add(statusLabel, BorderLayout.CENTER);
+        controlPanel.add(btnToggle, BorderLayout.EAST);
         serverPanel.add(controlPanel, BorderLayout.NORTH);
 
-        logArea = new JTextArea(6, 30);
-        logArea.setEditable(false);
-        logArea.setFont(new Font("微软雅黑", Font.PLAIN, 12));
-        serverPanel.add(new JScrollPane(logArea), BorderLayout.CENTER);
+        logArea = UIUtils.createStyledTextArea(false, 6);
+        JScrollPane logScroll = new JScrollPane(logArea);
+        logScroll.setBorder(new LineBorder(UIUtils.INPUT_BORDER, 1));
+        serverPanel.add(logScroll, BorderLayout.CENTER);
 
         // 下方：客户端测试
         JPanel clientPanel = new JPanel(new BorderLayout(5, 5));
-        clientPanel.setBorder(new TitledBorder("客户端测试"));
+        clientPanel.setBorder(UIUtils.createStyledSectionBorder("客户端测试"));
+        clientPanel.setBackground(UIUtils.BG_WHITE);
 
         JPanel cmdPanel = new JPanel(new BorderLayout(5, 5));
+        cmdPanel.setBackground(UIUtils.BG_WHITE);
+        JLabel cmdLabel = new JLabel("命令:");
+        cmdLabel.setFont(UIUtils.FONT_BODY_12);
+        cmdLabel.setForeground(UIUtils.TEXT_LABEL);
+        cmdPanel.add(cmdLabel, BorderLayout.WEST);
         cmdField = new JTextField();
-        JButton btnSend = new JButton("发送");
-        btnSend.addActionListener(this::doSend);
-        cmdPanel.add(new JLabel("命令:"), BorderLayout.WEST);
+        cmdField.setFont(UIUtils.FONT_BODY_14);
         cmdPanel.add(cmdField, BorderLayout.CENTER);
+        JButton btnSend = UIUtils.createGradientButton("发送");
+        btnSend.addActionListener(this::doSend);
         cmdPanel.add(btnSend, BorderLayout.EAST);
 
         clientPanel.add(cmdPanel, BorderLayout.NORTH);
 
-        clientResponseArea = new JTextArea(4, 30);
-        clientResponseArea.setEditable(false);
-        clientResponseArea.setFont(new Font("微软雅黑", Font.PLAIN, 12));
-        clientPanel.add(new JScrollPane(clientResponseArea), BorderLayout.CENTER);
+        clientResponseArea = UIUtils.createStyledTextArea(false, 4);
+        JScrollPane respScroll = new JScrollPane(clientResponseArea);
+        respScroll.setBorder(new LineBorder(UIUtils.INPUT_BORDER, 1));
+        clientPanel.add(respScroll, BorderLayout.CENTER);
 
         rightPanel.add(serverPanel, BorderLayout.CENTER);
         rightPanel.add(clientPanel, BorderLayout.SOUTH);
@@ -103,7 +115,7 @@ public class NetworkPanel extends JPanel {
     private JPanel createCommandListPanel() {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setPreferredSize(new Dimension(150, 0));
-        panel.setBorder(new TitledBorder("快捷命令"));
+        panel.setBorder(UIUtils.createStyledSectionBorder("快捷命令"));
 
         DefaultListModel<String> listModel = new DefaultListModel<>();
 
@@ -130,8 +142,11 @@ public class NetworkPanel extends JPanel {
         listModel.addElement("TURN_OFF:d6");
 
         cmdList = new JList<>(listModel);
-        cmdList.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        cmdList.setFont(UIUtils.FONT_BODY_12);
+        cmdList.setBackground(UIUtils.BG_WHITE);
         cmdList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        cmdList.setSelectionBackground(UIUtils.CARD_ON_BG);
+        cmdList.setSelectionForeground(UIUtils.PRIMARY_START);
 
         // 点击命令自动填入输入框
         cmdList.addListSelectionListener(e -> {
@@ -143,17 +158,20 @@ public class NetworkPanel extends JPanel {
             }
         });
 
-        panel.add(new JScrollPane(cmdList), BorderLayout.CENTER);
+        JScrollPane listScroll = new JScrollPane(cmdList);
+        listScroll.setBorder(new LineBorder(UIUtils.INPUT_BORDER, 1));
+        panel.add(listScroll, BorderLayout.CENTER);
 
         // 设备ID对照表
         JPanel legendPanel = new JPanel();
         legendPanel.setLayout(new BoxLayout(legendPanel, BoxLayout.Y_AXIS));
-        legendPanel.setBorder(new TitledBorder("设备ID对照"));
+        legendPanel.setBorder(UIUtils.createStyledSectionBorder("设备ID对照"));
+        legendPanel.setBackground(UIUtils.BG_WHITE);
         String[] legends = {"d1 - 客厅灯", "d2 - 卧室灯", "d3 - 客厅空调", "d4 - 卧室空调", "d5 - 客厅窗帘", "d6 - 智能音箱"};
         for (String legend : legends) {
             JLabel lbl = new JLabel(legend);
-            lbl.setFont(new Font("微软雅黑", Font.PLAIN, 11));
-            lbl.setForeground(Color.GRAY);
+            lbl.setFont(UIUtils.FONT_SMALL_11);
+            lbl.setForeground(UIUtils.TEXT_HINT);
             legendPanel.add(lbl);
         }
         panel.add(legendPanel, BorderLayout.SOUTH);
@@ -166,13 +184,13 @@ public class NetworkPanel extends JPanel {
             deviceServer.startServer();
             if (deviceServer.isRunning()) {
                 statusLabel.setText("状态: 运行中 (端口 " + deviceServer.getPort() + ")");
-                statusLabel.setForeground(new Color(0, 153, 0));
+                statusLabel.setForeground(UIUtils.STATUS_RUNNING);
                 btnToggle.setText("停止服务");
             }
         } else {
             deviceServer.stopServer();
             statusLabel.setText("状态: 已停止");
-            statusLabel.setForeground(Color.RED);
+            statusLabel.setForeground(UIUtils.STATUS_STOPPED);
             btnToggle.setText("启动服务");
         }
     }

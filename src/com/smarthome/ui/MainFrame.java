@@ -5,6 +5,7 @@ import com.smarthome.factory.DeviceFactory;
 import com.smarthome.service.*;
 import com.smarthome.network.*;
 import com.smarthome.util.FileUtil;
+import com.smarthome.util.UIUtils;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
@@ -113,6 +114,7 @@ public class MainFrame extends JFrame {
 
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        mainPanel.setBackground(UIUtils.BG_WHITE);
 
         JPanel leftPanel = createLeftPanel();
         JPanel centerPanel = createCenterPanel();
@@ -129,6 +131,8 @@ public class MainFrame extends JFrame {
 
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
+        menuBar.setBackground(new Color(245, 245, 245));
+        menuBar.setBorder(new MatteBorder(0, 0, 2, 0, UIUtils.PRIMARY_START));
 
         // 文件菜单
         JMenu fileMenu = new JMenu("文件(F)");
@@ -251,31 +255,73 @@ public class MainFrame extends JFrame {
 
     private void showAddDeviceDialog() {
         JDialog dialog = new JDialog(this, "添加设备", true);
-        dialog.setSize(350, 250);
+        dialog.setSize(380, 320);
         dialog.setLocationRelativeTo(this);
 
-        JPanel panel = new JPanel(new GridLayout(5, 2, 5, 5));
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(UIUtils.BG_WHITE);
+
+        wrapper.add(UIUtils.createGradientHeaderPanel("添加设备", 380, 70), BorderLayout.NORTH);
+
+        JPanel panel = new JPanel(new GridLayout(5, 2, 8, 8));
+        panel.setBorder(new EmptyBorder(15, 20, 15, 20));
+        panel.setBackground(UIUtils.BG_WHITE);
 
         String[] types = {"light:智能灯", "ac:空调", "curtain:智能窗帘", "speaker:智能音箱"};
         JComboBox<String> typeCombo = new JComboBox<>(types);
+        typeCombo.setFont(UIUtils.FONT_BODY_12);
+        typeCombo.setBackground(UIUtils.BG_WHITE);
+        typeCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                String item = (String) value;
+                String typeKey = item.split(":")[0];
+                String iconPath = null;
+                switch (typeKey) {
+                    case "light": iconPath = "assets/icons/device_light.png"; break;
+                    case "ac": iconPath = "assets/icons/device_ac.png"; break;
+                    case "curtain": iconPath = "assets/icons/device_curtain.png"; break;
+                    case "speaker": iconPath = "assets/icons/device_speaker.png"; break;
+                }
+                if (iconPath != null) {
+                    try {
+                        java.awt.Image img = new ImageIcon(iconPath).getImage()
+                                .getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH);
+                        label.setIcon(new ImageIcon(img));
+                    } catch (Exception ex) {}
+                }
+                label.setText(item.split(":")[1]);
+                return label;
+            }
+        });
         JTextField nameField = new JTextField();
+        nameField.setFont(UIUtils.FONT_BODY_14);
         JComboBox<String> roomCombo = new JComboBox<>();
+        roomCombo.setFont(UIUtils.FONT_BODY_12);
+        roomCombo.setBackground(UIUtils.BG_WHITE);
         for (Room room : roomService.findAll()) {
             roomCombo.addItem(room.getName());
         }
 
-        panel.add(new JLabel("设备类型:"));
+        JLabel l1 = UIUtils.createStyledLabel("设备类型:", UIUtils.FONT_BODY_12, UIUtils.TEXT_LABEL);
+        JLabel l2 = UIUtils.createStyledLabel("设备名称:", UIUtils.FONT_BODY_12, UIUtils.TEXT_LABEL);
+        JLabel l3 = UIUtils.createStyledLabel("所在房间:", UIUtils.FONT_BODY_12, UIUtils.TEXT_LABEL);
+
+        panel.add(l1);
         panel.add(typeCombo);
-        panel.add(new JLabel("设备名称:"));
+        panel.add(l2);
         panel.add(nameField);
-        panel.add(new JLabel("所在房间:"));
+        panel.add(l3);
         panel.add(roomCombo);
         panel.add(new JLabel()); // 占位
         panel.add(new JLabel()); // 占位
 
-        JButton btnConfirm = new JButton("确定");
-        JButton btnCancel = new JButton("取消");
+        JButton btnConfirm = UIUtils.createGradientButton("确定");
+        btnConfirm.setIcon(loadIcon("assets/icons/btn_add.png"));
+        JButton btnCancel = UIUtils.createGradientButton("取消");
+        btnCancel.addActionListener(e -> dialog.dispose());
         panel.add(btnConfirm);
         panel.add(btnCancel);
 
@@ -299,9 +345,8 @@ public class MainFrame extends JFrame {
             dialog.dispose();
         });
 
-        btnCancel.addActionListener(e -> dialog.dispose());
-
-        dialog.add(panel);
+        wrapper.add(panel, BorderLayout.CENTER);
+        dialog.add(wrapper);
         dialog.setVisible(true);
     }
 
@@ -312,34 +357,63 @@ public class MainFrame extends JFrame {
             return;
         }
 
-        String[] deviceNames = devices.stream()
-                .map(d -> d.getName() + " [" + d.getType() + "]")
-                .toArray(String[]::new);
+        JDialog dialog = new JDialog(this, "删除设备", true);
+        dialog.setSize(350, 350);
+        dialog.setLocationRelativeTo(this);
 
-        String selected = (String) JOptionPane.showInputDialog(this,
-                "选择要删除的设备:", "删除设备",
-                JOptionPane.PLAIN_MESSAGE, null, deviceNames, deviceNames[0]);
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(UIUtils.BG_WHITE);
+        wrapper.add(UIUtils.createGradientHeaderPanel("删除设备", 350, 60), BorderLayout.NORTH);
 
-        if (selected != null) {
-            int index = -1;
-            for (int i = 0; i < deviceNames.length; i++) {
-                if (deviceNames[i].equals(selected)) {
-                    index = i;
-                    break;
-                }
+        DefaultListModel<Device> listModel = new DefaultListModel<>();
+        for (Device d : devices) listModel.addElement(d);
+        JList<Device> deviceList = new JList<>(listModel);
+        deviceList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                Device d = (Device) value;
+                Icon icon = getDeviceIcon(d, 20);
+                label.setIcon(icon);
+                label.setText(d.getName());
+                label.setFont(UIUtils.FONT_BODY_13);
+                return label;
             }
-            if (index >= 0) {
-                Device device = devices.get(index);
+        });
+        deviceList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        deviceList.setFont(UIUtils.FONT_BODY_13);
+        if (!devices.isEmpty()) deviceList.setSelectedIndex(0);
+
+        JScrollPane scroll = new JScrollPane(deviceList);
+        scroll.setBorder(new EmptyBorder(10, 15, 5, 15));
+        scroll.setBackground(UIUtils.BG_WHITE);
+        wrapper.add(scroll, BorderLayout.CENTER);
+
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 8));
+        btnPanel.setBackground(UIUtils.BG_WHITE);
+        JButton btnConfirm = UIUtils.createGradientButton("删除");
+        btnConfirm.setIcon(loadIcon("assets/icons/btn_remove.png"));
+        JButton btnCancel = UIUtils.createGradientButton("取消");
+        btnConfirm.addActionListener(e -> {
+            Device device = deviceList.getSelectedValue();
+            if (device != null) {
                 Room room = roomService.findById(device.getRoomId());
-                if (room != null) {
-                    room.removeDevice(device);
-                }
+                if (room != null) room.removeDevice(device);
                 deviceService.removeDevice(device.getId());
                 logService.log(device.getName(), "删除设备");
                 updateLogArea();
                 refreshDevicePanel();
             }
-        }
+            dialog.dispose();
+        });
+        btnCancel.addActionListener(e -> dialog.dispose());
+        btnPanel.add(btnConfirm);
+        btnPanel.add(btnCancel);
+        wrapper.add(btnPanel, BorderLayout.SOUTH);
+
+        dialog.add(wrapper);
+        dialog.setVisible(true);
     }
 
     // ==================== 日志导出 ====================
@@ -374,13 +448,14 @@ public class MainFrame extends JFrame {
         {145, 50, 85, 95},   // 卧室 - 右上大
         {145, 150, 85, 30},  // 卫生间 - 右中小(不可选中)
         {10, 195, 80, 40},   // 厨房 - 左下
-        {95, 195, 140, 40}   // 书房 - 右下
+        {95, 195, 140, 40}   // 书房 - 右下（完整，无垂直内墙分隔）
     };
 
     private JPanel createLeftPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setPreferredSize(new Dimension(250, 0));
-        panel.setBorder(new TitledBorder("户型图"));
+        panel.setBorder(UIUtils.createStyledSectionBorder("户型图"));
+        panel.setBackground(UIUtils.BG_WHITE);
 
         floorPlanPanel = new JPanel() {
             @Override
@@ -390,7 +465,7 @@ public class MainFrame extends JFrame {
             }
         };
         floorPlanPanel.setPreferredSize(new Dimension(240, 240));
-        floorPlanPanel.setBackground(new Color(245, 245, 240));
+        floorPlanPanel.setBackground(UIUtils.BG_FLOOR);
         floorPlanPanel.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -429,29 +504,32 @@ public class MainFrame extends JFrame {
         // 设备计数统计
         JPanel statsPanel = new JPanel();
         statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
-        statsPanel.setBorder(new TitledBorder("房间设备"));
+        statsPanel.setBorder(UIUtils.createStyledSectionBorder("房间设备"));
+        statsPanel.setBackground(UIUtils.BG_WHITE);
         List<Room> rooms = roomService.findAll();
         for (Room room : rooms) {
             JLabel lbl = new JLabel(room.getName() + ": " + room.getDeviceCount() + "个设备");
-            lbl.setFont(new Font("微软雅黑", Font.PLAIN, 11));
-            lbl.setForeground(Color.GRAY);
+            lbl.setFont(UIUtils.FONT_SMALL_11);
+            lbl.setForeground(UIUtils.TEXT_HINT);
             statsPanel.add(lbl);
         }
-        panel.add(new JScrollPane(statsPanel), BorderLayout.CENTER);
+        JScrollPane statsScroll = new JScrollPane(statsPanel);
+        statsScroll.setBorder(new LineBorder(UIUtils.INPUT_BORDER, 1));
+        panel.add(statsScroll, BorderLayout.CENTER);
         return panel;
     }
 
     private void drawFloorPlan(Graphics g) {
         Graphics2D g2 = (Graphics2D) g;
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        UIUtils.applyRenderingHints(g2);
         List<Room> rooms = roomService.findAll();
 
         // 顶部 "全部" 区域
         boolean allSelected = selectedRoomIndex == 0;
-        g2.setColor(allSelected ? new Color(70, 130, 180) : new Color(180, 200, 220));
+        g2.setColor(allSelected ? UIUtils.ALL_SEL : UIUtils.ALL_UNSEL);
         g2.fillRoundRect(10, 5, 220, 35, 8, 8);
         g2.setColor(Color.WHITE);
-        g2.setFont(new Font("微软雅黑", Font.BOLD, 13));
+        g2.setFont(UIUtils.FONT_TITLE_13);
         FontMetrics fm = g2.getFontMetrics();
         String allText = "全部 (" + deviceService.getDeviceCount() + ")";
         g2.drawString(allText, 10 + (220 - fm.stringWidth(allText)) / 2, 28);
@@ -463,10 +541,10 @@ public class MainFrame extends JFrame {
 
             if (i == 2) {
                 // 卫生间 - 特殊样式，不可选中
-                g2.setColor(new Color(220, 230, 220));
+                g2.setColor(UIUtils.BATHROOM_BG);
                 g2.fillRect(b[0] + 1, b[1] + 1, b[2] - 2, b[3] - 2);
-                g2.setColor(new Color(130, 150, 130));
-                g2.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+                g2.setColor(UIUtils.BATHROOM_TEXT);
+                g2.setFont(UIUtils.FONT_SMALL_10);
                 fm = g2.getFontMetrics();
                 String name = "卫生间";
                 g2.drawString(name, b[0] + (b[2] - fm.stringWidth(name)) / 2, b[1] + b[3] / 2 + 4);
@@ -476,25 +554,25 @@ public class MainFrame extends JFrame {
             Room room = rooms.get(roomIdx);
 
             // 房间背景
-            g2.setColor(new Color(235, 242, 250));
+            g2.setColor(UIUtils.ROOM_BG);
             g2.fillRect(b[0] + 1, b[1] + 1, b[2] - 2, b[3] - 2);
 
             // 选中高亮
             if (selectedRoomIndex == roomIdx + 1) {
-                g2.setColor(new Color(70, 130, 180, 60));
+                g2.setColor(UIUtils.SEL_HIGHLIGHT);
                 g2.fillRect(b[0] + 1, b[1] + 1, b[2] - 2, b[3] - 2);
             }
 
             // 房间名称
-            g2.setColor(new Color(50, 50, 50));
-            g2.setFont(new Font("微软雅黑", Font.BOLD, 13));
+            g2.setColor(UIUtils.TEXT_DARK);
+            g2.setFont(UIUtils.FONT_TITLE_13);
             fm = g2.getFontMetrics();
             String name = room.getName();
             g2.drawString(name, b[0] + (b[2] - fm.stringWidth(name)) / 2, b[1] + b[3] / 2 - 5);
 
             // 设备数量
-            g2.setColor(Color.GRAY);
-            g2.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+            g2.setColor(UIUtils.TEXT_HINT);
+            g2.setFont(UIUtils.FONT_SMALL_10);
             fm = g2.getFontMetrics();
             String count = room.getDeviceCount() + "个设备";
             g2.drawString(count, b[0] + (b[2] - fm.stringWidth(count)) / 2, b[1] + b[3] / 2 + 15);
@@ -503,7 +581,7 @@ public class MainFrame extends JFrame {
         }
 
         // 画墙壁线 - 先画实心外墙（粗）
-        g2.setColor(new Color(80, 80, 80));
+        g2.setColor(UIUtils.WALL_OUTER);
         g2.setStroke(new BasicStroke(5));
         // 四面外墙
         g2.drawLine(8, 48, 232, 48);      // 顶
@@ -512,10 +590,10 @@ public class MainFrame extends JFrame {
         g2.drawLine(232, 48, 232, 236);   // 右
 
         // 内墙（稍细）
-        g2.setColor(new Color(100, 100, 100));
+        g2.setColor(UIUtils.WALL_INNER);
         g2.setStroke(new BasicStroke(3));
-        // 垂直内墙 - 客厅|右侧
-        g2.drawLine(143, 48, 143, 236);
+        // 垂直内墙 - 客厅|右侧（止于y=192，不穿过书房）
+        g2.drawLine(143, 48, 143, 192);
         // 水平内墙 - 卧室|卫生间
         g2.drawLine(143, 148, 232, 148);
         // 水平内墙 - 上下排
@@ -524,7 +602,7 @@ public class MainFrame extends JFrame {
         g2.drawLine(93, 192, 93, 236);
 
         // 门标记（用背景色覆盖墙壁段，模拟门洞）
-        g2.setColor(new Color(245, 245, 240));
+        g2.setColor(UIUtils.BG_FLOOR);
         g2.setStroke(new BasicStroke(5));
         // 大门 - 客厅左墙
         g2.drawLine(8, 90, 8, 115);
@@ -532,23 +610,27 @@ public class MainFrame extends JFrame {
         g2.setStroke(new BasicStroke(4));
         g2.drawLine(143, 65, 143, 85);
         // 客厅到厨房的门
-        g2.drawLine(50, 192, 75, 192);
+        g2.drawLine(20, 192, 40, 192);
         // 卫生间门 - 左侧从客厅进
         g2.drawLine(143, 155, 143, 172);
-        // 卧室到书房的门
-        g2.drawLine(170, 192, 195, 192);
+        // 书房门 - 从客厅进（水平内墙上，厨房|书房分隔线右侧）
+        g2.drawLine(100, 192, 125, 192);
     }
 
     private JPanel createCenterPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(new TitledBorder("设备列表"));
+        panel.setBorder(UIUtils.createStyledSectionBorder("设备列表"));
+        panel.setBackground(UIUtils.BG_WHITE);
 
         devicePanel = new JPanel(new GridLayout(0, 3, 10, 10));
         devicePanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        devicePanel.setBackground(UIUtils.BG_WHITE);
 
         refreshDevicePanel();
 
-        panel.add(new JScrollPane(devicePanel), BorderLayout.CENTER);
+        JScrollPane scrollPane = new JScrollPane(devicePanel);
+        scrollPane.setBorder(new LineBorder(UIUtils.INPUT_BORDER, 1));
+        panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
 
@@ -578,26 +660,28 @@ public class MainFrame extends JFrame {
 
         boolean isOn = device.isStatus();
 
-        Color borderColor = isOn ? new Color(255, 215, 0) : Color.GRAY;
-        card.setBorder(BorderFactory.createLineBorder(borderColor, isOn ? 3 : 1));
-        card.setBackground(isOn ? new Color(51, 51, 51) : Color.WHITE);
+        // 蓝/白主题
+        Color bgColor = isOn ? UIUtils.CARD_ON_BG : UIUtils.CARD_OFF_BG;
+        Color borderColor = isOn ? UIUtils.CARD_ON_BORDER : UIUtils.CARD_OFF_BORDER;
+        int borderWidth = isOn ? 2 : 1;
 
-        String icon = getDeviceIcon(device);
-        JLabel iconLabel = new JLabel(icon, SwingConstants.CENTER);
+        card.setBorder(BorderFactory.createLineBorder(borderColor, borderWidth));
+        card.setBackground(bgColor);
 
-        if (isOn) {
-            iconLabel.setFont(new Font("微软雅黑", Font.BOLD, 30));
-            iconLabel.setForeground(new Color(255, 215, 0));
+        Icon devIcon = getDeviceIcon(device, 36);
+        JLabel iconLabel;
+        if (devIcon != null) {
+            iconLabel = new JLabel(devIcon, SwingConstants.CENTER);
         } else {
-            iconLabel.setFont(new Font("微软雅黑", Font.PLAIN, 30));
-            iconLabel.setForeground(new Color(153, 153, 153));
+            iconLabel = new JLabel("[?]", SwingConstants.CENTER);
+            iconLabel.setFont(new Font("微软雅黑", Font.BOLD, 28));
+            iconLabel.setForeground(isOn ? UIUtils.CARD_ON_ICON : UIUtils.CARD_OFF_ICON);
         }
-
         card.add(iconLabel, BorderLayout.CENTER);
 
         JLabel nameLabel = new JLabel(device.getName(), SwingConstants.CENTER);
-        nameLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
-        nameLabel.setForeground(isOn ? Color.WHITE : Color.BLACK);
+        nameLabel.setFont(UIUtils.FONT_BODY_12);
+        nameLabel.setForeground(UIUtils.TEXT_DARK);
         card.add(nameLabel, BorderLayout.SOUTH);
 
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -606,32 +690,61 @@ public class MainFrame extends JFrame {
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 showControlDialog(device);
             }
+
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                if (!isOn) {
+                    card.setBackground(UIUtils.CARD_HOVER_BG);
+                }
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                card.setBackground(bgColor);
+            }
         });
 
         return card;
     }
 
-    private String getDeviceIcon(Device device) {
-        if (device instanceof Light) return "[L]";
-        if (device instanceof AirConditioner) return "[A]";
-        if (device instanceof Curtain) return "[C]";
-        if (device instanceof Speaker) return "[S]";
-        return "[?]";
+    private Icon getDeviceIcon(Device device, int size) {
+        String path = null;
+        if (device instanceof Light) path = "assets/icons/device_light.png";
+        else if (device instanceof AirConditioner) path = "assets/icons/device_ac.png";
+        else if (device instanceof Curtain) path = "assets/icons/device_curtain.png";
+        else if (device instanceof Speaker) path = "assets/icons/device_speaker.png";
+        if (path == null) return null;
+        try {
+            java.awt.Image img = new ImageIcon(path).getImage()
+                    .getScaledInstance(size, size, java.awt.Image.SCALE_SMOOTH);
+            return new ImageIcon(img);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private JPanel createRightPanel() {
         JPanel panel = new JPanel();
-        panel.setPreferredSize(new Dimension(200, 0));
-        panel.setBorder(new TitledBorder("设备控制"));
+        panel.setPreferredSize(new Dimension(180, 0));
+        panel.setBorder(UIUtils.createStyledSectionBorder("设备控制"));
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(UIUtils.BG_WHITE);
 
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(new JLabel("选择设备进行控制"));
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(Box.createVerticalStrut(15));
 
-        JButton btnOn = new JButton("全部开启");
-        JButton btnOff = new JButton("全部关闭");
+        JLabel titleLabel = UIUtils.createStyledLabel("批量控制", UIUtils.FONT_TITLE_14, UIUtils.PRIMARY_START);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(5));
 
+        JLabel hintLabel = UIUtils.createStyledLabel("一键控制所有设备", UIUtils.FONT_SMALL_10, UIUtils.TEXT_HINT);
+        hintLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(hintLabel);
+        panel.add(Box.createVerticalStrut(15));
+
+        JButton btnOn = UIUtils.createGradientButton("全部开启", new Dimension(150, 36));
+        btnOn.setIcon(loadIcon("assets/icons/btn_on.png"));
+        btnOn.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnOn.addActionListener(e -> {
             for (Device d : deviceService.findAll()) {
                 d.turnOn();
@@ -640,7 +753,12 @@ public class MainFrame extends JFrame {
             updateLogArea();
             refreshDevicePanel();
         });
+        panel.add(btnOn);
+        panel.add(Box.createVerticalStrut(10));
 
+        JButton btnOff = UIUtils.createGradientButton("全部关闭", new Dimension(150, 36));
+        btnOff.setIcon(loadIcon("assets/icons/btn_off.png"));
+        btnOff.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnOff.addActionListener(e -> {
             for (Device d : deviceService.findAll()) {
                 d.turnOff();
@@ -649,48 +767,74 @@ public class MainFrame extends JFrame {
             updateLogArea();
             refreshDevicePanel();
         });
-
-        panel.add(btnOn);
-        panel.add(Box.createVerticalStrut(5));
         panel.add(btnOff);
 
+        panel.add(Box.createVerticalStrut(15));
+        JSeparator sep = new JSeparator(SwingConstants.HORIZONTAL);
+        sep.setMaximumSize(new Dimension(160, 1));
+        sep.setForeground(UIUtils.INPUT_BORDER);
+        panel.add(sep);
+        panel.add(Box.createVerticalStrut(15));
+
+        JButton btnScene = UIUtils.createGradientButton("场景模式", new Dimension(150, 36));
+        btnScene.setIcon(loadIcon("assets/icons/scene_home.png"));
+        btnScene.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnScene.addActionListener(e -> showSceneDialog());
+        panel.add(btnScene);
+
+        panel.add(Box.createVerticalGlue());
         return panel;
     }
 
     private JPanel createBottomPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setPreferredSize(new Dimension(0, 150));
-        panel.setBorder(new TitledBorder("操作日志"));
+        panel.setBorder(UIUtils.createStyledSectionBorder("操作日志"));
+        panel.setBackground(UIUtils.BG_WHITE);
 
-        logArea = new JTextArea();
-        logArea.setEditable(false);
-        logArea.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        logArea = UIUtils.createStyledTextArea(false, 0);
+        JScrollPane logScroll = new JScrollPane(logArea);
+        logScroll.setBorder(new LineBorder(UIUtils.INPUT_BORDER, 1));
 
-        btnExportLog = new JButton("导出日志");
+        btnExportLog = UIUtils.createGradientButton("导出日志", new Dimension(100, 30));
         btnExportLog.addActionListener(e -> exportLogs());
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btnPanel.setBackground(UIUtils.BG_WHITE);
+        btnPanel.setBorder(new EmptyBorder(5, 0, 5, 5));
         btnPanel.add(btnExportLog);
 
-        panel.add(new JScrollPane(logArea), BorderLayout.CENTER);
+        panel.add(logScroll, BorderLayout.CENTER);
         panel.add(btnPanel, BorderLayout.SOUTH);
         return panel;
     }
 
     private void showControlDialog(Device device) {
         JDialog dialog = new JDialog(this, "设备控制 - " + device.getName(), true);
-        dialog.setSize(320, 350);
+        dialog.setSize(320, 420);
         dialog.setLocationRelativeTo(this);
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(UIUtils.BG_WHITE);
+
+        // 渐变头部
+        wrapper.add(UIUtils.createGradientHeaderPanel("设备控制", 320, 70), BorderLayout.NORTH);
 
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBackground(UIUtils.BG_WHITE);
 
-        panel.add(new JLabel("设备类型: " + device.getType()));
+        JLabel typeLabel = UIUtils.createStyledLabel("设备类型: " + device.getType(),
+                UIUtils.FONT_BODY_12, UIUtils.TEXT_LABEL);
+        panel.add(typeLabel);
         panel.add(Box.createVerticalStrut(5));
 
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        statusPanel.setBackground(UIUtils.BG_WHITE);
         JLabel statusLabel = new JLabel("状态: " + device.getStatusText());
+        statusLabel.setFont(UIUtils.FONT_BODY_13);
+        statusLabel.setForeground(UIUtils.TEXT_DARK);
         statusPanel.add(statusLabel);
         panel.add(statusPanel);
         panel.add(Box.createVerticalStrut(10));
@@ -709,10 +853,14 @@ public class MainFrame extends JFrame {
         panel.add(Box.createVerticalStrut(10));
 
         // 按钮区
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        JButton btnOn = new JButton("开启");
-        JButton btnOff = new JButton("关闭");
-        JButton btnConfirm = new JButton("确定");
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+        btnPanel.setBackground(UIUtils.BG_WHITE);
+        JButton btnOn = UIUtils.createGradientButton("开启");
+        btnOn.setIcon(loadIcon("assets/icons/btn_on.png"));
+        JButton btnOff = UIUtils.createGradientButton("关闭");
+        btnOff.setIcon(loadIcon("assets/icons/btn_off.png"));
+        JButton btnConfirm = UIUtils.createGradientButton("确定");
+        btnConfirm.setIcon(loadIcon("assets/icons/btn_ok.png"));
 
         btnOn.addActionListener(e -> {
             device.turnOn();
@@ -742,7 +890,8 @@ public class MainFrame extends JFrame {
         btnPanel.add(btnConfirm);
         panel.add(btnPanel);
 
-        dialog.add(new JScrollPane(panel));
+        wrapper.add(new JScrollPane(panel), BorderLayout.CENTER);
+        dialog.add(wrapper);
         dialog.setVisible(true);
     }
 

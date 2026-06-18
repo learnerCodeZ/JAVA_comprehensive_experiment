@@ -10,7 +10,7 @@ import java.util.List;
 public class MonitorService implements Runnable {
     private DeviceService deviceService;
     private LogService logService;
-    private boolean running;
+    private volatile boolean running;
     private Thread monitorThread;
 
     public MonitorService(DeviceService deviceService, LogService logService) {
