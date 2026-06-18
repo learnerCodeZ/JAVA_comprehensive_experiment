@@ -149,9 +149,9 @@ public class MainFrame extends JFrame {
 
         // 场景菜单
         JMenu sceneMenu = new JMenu("场景(S)");
-        sceneHomeItem = new JMenuItem("回家模式");
-        sceneAwayItem = new JMenuItem("离家模式");
-        sleepItem = new JMenuItem("睡眠模式");
+        sceneHomeItem = new JMenuItem("回家模式", loadIcon("assets/design/scene_home.png"));
+        sceneAwayItem = new JMenuItem("离家模式", loadIcon("assets/design/scene_away.png"));
+        sleepItem = new JMenuItem("睡眠模式", loadIcon("assets/design/scene_sleep.png"));
         sceneHomeItem.addActionListener(e -> applySceneHome());
         sceneAwayItem.addActionListener(e -> applySceneAway());
         sleepItem.addActionListener(e -> applySceneSleep());
@@ -607,5 +607,15 @@ public class MainFrame extends JFrame {
         }
         monitorService.stopMonitor();
         super.dispose();
+    }
+
+    private Icon loadIcon(String path) {
+        try {
+            java.awt.Image img = new ImageIcon(path).getImage()
+                    .getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH);
+            return new ImageIcon(img);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
