@@ -22,7 +22,7 @@ public class MainFrame extends JFrame {
     private DeviceServer deviceServer;
     private NetworkPanel networkPanel;
 
-    private JList<String> roomList;
+    private JPanel floorPlanPanel;
     private JPanel devicePanel;
     private JTextArea logArea;
     private JLabel statusLabel;
@@ -364,31 +364,180 @@ public class MainFrame extends JFrame {
 
     // ==================== 原有界面方法 ====================
 
+    private int selectedRoomIndex = 0;
+    // 布局（坐标基于 240x240 画布，外墙 8~232, 48~236）:
+    //   客厅(左大) | 卧室(右上大)
+    //   客厅       | 卫生间(右中小，不可选中)
+    //   厨房(左下)  | 书房(右下)
+    private static final int[][] ROOM_BOUNDS = {
+        {10, 50, 130, 140},  // 客厅 - 左侧大
+        {145, 50, 85, 95},   // 卧室 - 右上大
+        {145, 150, 85, 30},  // 卫生间 - 右中小(不可选中)
+        {10, 195, 80, 40},   // 厨房 - 左下
+        {95, 195, 140, 40}   // 书房 - 右下
+    };
+
     private JPanel createLeftPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setPreferredSize(new Dimension(150, 0));
-        panel.setBorder(new TitledBorder("房间列表"));
+        panel.setPreferredSize(new Dimension(250, 0));
+        panel.setBorder(new TitledBorder("户型图"));
 
-        DefaultListModel<String> listModel = new DefaultListModel<>();
-        listModel.addElement("全部");
-        for (Room room : roomService.findAll()) {
-            listModel.addElement(room.getName());
-        }
-
-        roomList = new JList<>(listModel);
-        roomList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        roomList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                selectedRoomIndex = roomList.getSelectedIndex();
+        floorPlanPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                drawFloorPlan(g);
+            }
+        };
+        floorPlanPanel.setPreferredSize(new Dimension(240, 240));
+        floorPlanPanel.setBackground(new Color(245, 245, 240));
+        floorPlanPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                int x = e.getX(), y = e.getY();
+                // 检查"全部"区域
+                if (y < 45) {
+                    selectedRoomIndex = 0;
+                } else {
+                    // 检查房间区域
+                    boolean found = false;
+                    int roomIdx = 0;
+                    for (int i = 0; i < ROOM_BOUNDS.length; i++) {
+                        int[] b = ROOM_BOUNDS[i];
+                        if (x >= b[0] && x < b[0] + b[2] && y >= b[1] && y < b[1] + b[3]) {
+                            if (i == 2) {
+                                // 卫生间不可选中
+                                found = true;
+                                break;
+                            }
+                            selectedRoomIndex = roomIdx + 1;
+                            found = true;
+                            break;
+                        }
+                        if (i != 2) roomIdx++;
+                    }
+                    if (!found) selectedRoomIndex = 0;
+                }
                 refreshDevicePanel();
+                floorPlanPanel.repaint();
             }
         });
+        floorPlanPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        panel.add(new JScrollPane(roomList), BorderLayout.CENTER);
+        panel.add(floorPlanPanel, BorderLayout.NORTH);
+
+        // 设备计数统计
+        JPanel statsPanel = new JPanel();
+        statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
+        statsPanel.setBorder(new TitledBorder("房间设备"));
+        List<Room> rooms = roomService.findAll();
+        for (Room room : rooms) {
+            JLabel lbl = new JLabel(room.getName() + ": " + room.getDeviceCount() + "个设备");
+            lbl.setFont(new Font("微软雅黑", Font.PLAIN, 11));
+            lbl.setForeground(Color.GRAY);
+            statsPanel.add(lbl);
+        }
+        panel.add(new JScrollPane(statsPanel), BorderLayout.CENTER);
         return panel;
     }
 
-    private int selectedRoomIndex = 0;
+    private void drawFloorPlan(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        List<Room> rooms = roomService.findAll();
+
+        // 顶部 "全部" 区域
+        boolean allSelected = selectedRoomIndex == 0;
+        g2.setColor(allSelected ? new Color(70, 130, 180) : new Color(180, 200, 220));
+        g2.fillRoundRect(10, 5, 220, 35, 8, 8);
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("微软雅黑", Font.BOLD, 13));
+        FontMetrics fm = g2.getFontMetrics();
+        String allText = "全部 (" + deviceService.getDeviceCount() + ")";
+        g2.drawString(allText, 10 + (220 - fm.stringWidth(allText)) / 2, 28);
+
+        // 画可选房间（跳过索引2卫生间）
+        int roomIdx = 0;
+        for (int i = 0; i < ROOM_BOUNDS.length; i++) {
+            int[] b = ROOM_BOUNDS[i];
+
+            if (i == 2) {
+                // 卫生间 - 特殊样式，不可选中
+                g2.setColor(new Color(220, 230, 220));
+                g2.fillRect(b[0] + 1, b[1] + 1, b[2] - 2, b[3] - 2);
+                g2.setColor(new Color(130, 150, 130));
+                g2.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+                fm = g2.getFontMetrics();
+                String name = "卫生间";
+                g2.drawString(name, b[0] + (b[2] - fm.stringWidth(name)) / 2, b[1] + b[3] / 2 + 4);
+                continue;
+            }
+
+            Room room = rooms.get(roomIdx);
+
+            // 房间背景
+            g2.setColor(new Color(235, 242, 250));
+            g2.fillRect(b[0] + 1, b[1] + 1, b[2] - 2, b[3] - 2);
+
+            // 选中高亮
+            if (selectedRoomIndex == roomIdx + 1) {
+                g2.setColor(new Color(70, 130, 180, 60));
+                g2.fillRect(b[0] + 1, b[1] + 1, b[2] - 2, b[3] - 2);
+            }
+
+            // 房间名称
+            g2.setColor(new Color(50, 50, 50));
+            g2.setFont(new Font("微软雅黑", Font.BOLD, 13));
+            fm = g2.getFontMetrics();
+            String name = room.getName();
+            g2.drawString(name, b[0] + (b[2] - fm.stringWidth(name)) / 2, b[1] + b[3] / 2 - 5);
+
+            // 设备数量
+            g2.setColor(Color.GRAY);
+            g2.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+            fm = g2.getFontMetrics();
+            String count = room.getDeviceCount() + "个设备";
+            g2.drawString(count, b[0] + (b[2] - fm.stringWidth(count)) / 2, b[1] + b[3] / 2 + 15);
+
+            roomIdx++;
+        }
+
+        // 画墙壁线 - 先画实心外墙（粗）
+        g2.setColor(new Color(80, 80, 80));
+        g2.setStroke(new BasicStroke(5));
+        // 四面外墙
+        g2.drawLine(8, 48, 232, 48);      // 顶
+        g2.drawLine(8, 236, 232, 236);    // 底
+        g2.drawLine(8, 48, 8, 236);       // 左
+        g2.drawLine(232, 48, 232, 236);   // 右
+
+        // 内墙（稍细）
+        g2.setColor(new Color(100, 100, 100));
+        g2.setStroke(new BasicStroke(3));
+        // 垂直内墙 - 客厅|右侧
+        g2.drawLine(143, 48, 143, 236);
+        // 水平内墙 - 卧室|卫生间
+        g2.drawLine(143, 148, 232, 148);
+        // 水平内墙 - 上下排
+        g2.drawLine(8, 192, 232, 192);
+        // 垂直内墙 - 厨房|书房
+        g2.drawLine(93, 192, 93, 236);
+
+        // 门标记（用背景色覆盖墙壁段，模拟门洞）
+        g2.setColor(new Color(245, 245, 240));
+        g2.setStroke(new BasicStroke(5));
+        // 大门 - 客厅左墙
+        g2.drawLine(8, 90, 8, 115);
+        // 客厅到卧室的门 - 内墙上方
+        g2.setStroke(new BasicStroke(4));
+        g2.drawLine(143, 65, 143, 85);
+        // 客厅到厨房的门
+        g2.drawLine(50, 192, 75, 192);
+        // 卫生间门 - 左侧从客厅进
+        g2.drawLine(143, 155, 143, 172);
+        // 卧室到书房的门
+        g2.drawLine(170, 192, 195, 192);
+    }
 
     private JPanel createCenterPanel() {
         JPanel panel = new JPanel(new BorderLayout());
